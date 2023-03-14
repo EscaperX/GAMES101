@@ -1,0 +1,213 @@
+**Assignment 1: Projection and Rotation**
+
+Key Algorithm: Bresenham's Line Drawing Algorithm
+============================
+
+Line Drawing Algorithm is to determine which pixel to be chosen as a part of a rasterized segment.
+The main purpose is to choose the nearest pixel to the intersection of discreted segment using the least computation.
+It's based on method that step by step calculate the intersection, but using many trick to simplify the computation.
+
+Assume the function of the segment is $y = f(x)$. As the intercept is always canceled out, we can just omit it.
+
+Suppose the possition of current intersection is $(x_i, y_i)$, the chosen pixel is $(x_i, \hat{y}_i)$. The $\hat{y}_i$ is defined as follow:
+\begin{equation}
+\hat{y}_i = \left\{
+    \begin{array}{rl} 
+        \lfloor y_i \rfloor & y_i - \lfloor y_i \rfloor \leq 0.5 \\ 
+        \lfloor y_i \rfloor + 1 & \lfloor y_i \rfloor + 1 - y_i \leq 0.5 \\  
+    \end{array}
+    \right.
+\end{equation}
+
+How to determined that if we need to step forward one grid in y axis? We can use a simple trick to check that. Notice
+that the following derivation is based on the fact that the slope of the segment is between $[0, 0.5]$.
+Assume we are at $(x_i, y_i)$, thus grid $(x_i, \hat{y}_i)$ is chosen.
+For the next intersection $(x_{i + 1}, y_{i + 1})$, the corresponding grid is either $(x_{i} + 1, \hat{y}_i)$ or $(x_i +
+1, \hat{y}_i + 1$. (Because y is increasing less than half of the grid.)
+
+We can use distance to determine which y is closer.
+\begin{equation}
+\begin{aligned}
+d_{up} & = \hat{y}_i + 1 - y_{i + 1} \\
+d_{down} & = y_{i + 1} - \hat{y}_i \\
+\Delta &= d_{up} - d_{down}
+\end{aligned}
+\end{equation}
+
+If $\Delta < 0$, which means the intersection is closer to the grid above than the other one, vice versa. Expand the formula of $\Delta$ and we can get: 
+\begin{equation} 
+\begin{aligned} 
+    \Delta &=d_{up} - d_{down}=2\hat{y}_i + 1 - 2y_{i + 1} \\ 
+            &=2\hat{y}_i + 1 - 2 (a (x_i + 1) + b) \\ 
+            &=2\hat{y}_i + 1 - 2ax_i - 2a - 2b 
+\end{aligned} 
+\end{equation}
+
+We know that $a = \frac{d_y}{d_x}$. (In practice we usually draw a segment whose start point and end point is known.) 
+Moreover, Only $\Delta$'s sign is useful. We can use $d_x, d_y$ to remove the division from the equation.
+
+\begin{equation}
+\Delta_{i + 1} = 2 d_x \hat{y}_i + d_x - 2 d_y x_i - 2d_y - 2 d_x b
+\end{equation}
+
+Add a subscript to indicate that this $\Delta$ is used for $x_{i + 1}, y_{i + 1}$, And we find this can be written as a recursive function:
+\begin{equation}
+\Delta_{i + 1} = \Delta_{i} + 2 d_x (\hat{y}_i - \hat{y}_{i-1}) - 2 d_y \\
+\Delta_1 = 2\hat{y}_0 + 1 - 2ax_0 - 2a - 2b = 2y_0 + 1 - 2a - 2(ax_0 + b) = 1 - 2a 
+\end{equation}
+
+We use the fact that $(x_0, y_0)$ is just the chosen grid. So we just maintain the $\Delta$. 
+If it is negative, increase by $-2d_y$ and assign $\hat{y}_{i+1}$ as $\hat{y}_i$ . 
+Otherwise, assign $\hat{y}_{i+1}$ as $\hat{y}_i + 1$ and increase $\Delta$ by $2d_x - 2d_y$.
+
+
+
+Rotation around Axis
+====================
+
+It's easy to derive the rotatoin matrix with some basic triangular function, which is actually an simplified question in
+2d plane.
+
+Suppose vector $\mathbf{u} = (\theta, l)$, which is represented in the polar coordinate and equals to $(l cos \theta, l
+\sin \theta)$, rotates $\phi$ around Z-axis (perpendicular to the plane). The rotated vector named $\mathbf{v}$ has
+coordinates $(\theta + \phi, l)$ in the polar coordinate system which equals to $(l\cos (\theta + \phi), l \sin (\theta
++ \phi))$.
+Expend the triangular function of the summation of angle, we can get $\mathbf{v} = (l (\cos \theta \cos \phi -
+\sin\theta \sin \phi), l (\sin \theta \cos \phi + \sin \phi \cos \theta))$.
+The transformation formular can be written in the following matrix:
+
+\begin{equation}
+\mathbf{v}=\begin{bmatrix}
+\cos \phi & - \sin \phi \\
+\sin \phi & \cos \phi\\
+\end{bmatrix}
+\begin{bmatrix}
+\cos \theta \\
+\sin \theta
+\end{bmatrix}.
+\end{equation}
+
+
+Projection
+==========
+
+Orthorgnal Projection
+---------------------
+Orthorgnal projection is transforming an axis-aligned box on the canonical view volume. It can be splitted into two part: Translation and Scaling.
+![transformation](figures/1.jpg)
+Assume there's an AABB box with the minimum corner $(l,b,n)$ and the maximum corner $(r,t, f)$. The transformation matrix is:
+\begin{equation}
+\begin{aligned}
+\mathbf{P}_o=\mathbf{S}(\mathbf{s}) \mathbf{T}(\mathbf{t})&=\begin{bmatrix}
+\frac{2}{r-l} & 0 & 0 & 0 \\
+0 & \frac{2}{t-b} & 0 & 0 \\
+0 & 0 & \frac{2}{f-n} & 0 \\
+0 & 0 & 0 & 1
+\end{bmatrix}\begin{bmatrix}
+1 & 0 & 0 & -\frac{l+r}{2} \\
+0 & 1 & 0 & -\frac{t+b}{2} \\
+0 & 0 & 1 & -\frac{f+n}{2} \\
+0 & 0 & 0 & 1
+\end{bmatrix}
+\\
+&=\begin{bmatrix}
+\frac{2}{r-l} & 0 & 0 & -\frac{r+l}{r-l} \\
+0 & \frac{2}{t-b} & 0 & -\frac{t+b}{t-b} \\
+0 & 0 & \frac{2}{f-n} & -\frac{f+n}{f-n} \\
+0 & 0 & 0 & 1
+\end{bmatrix}
+\end{aligned}
+\end{equation}
+
+
+
+Perspective Projection
+---------------------
+Perspective projection is to transform a frustum into a unit cube, so called canonical view volume. We can first transform the frustum into a cuboid and then apply orthorgnal projection.
+
+What we do first is to shrink the extended part into a cuboid while keeping the front face and the distance to the far plane as the depth of the cuboid.
+
+![](figures/2.png)
+
+Use the property of similarity of triangles, we can get the transformation rules for x and y axis:
+
+![](figures/3.png)
+$$
+x_{new} = x \cdot \frac{z_{near}}{z} \\
+y_{new} = y \cdot \frac{z_{near}}{z}
+$$
+Because the transformation depends on the value of $z$, we can use the property of homogeneous coordinates.
+
+\begin{equation}
+\mathbf{v} = \begin{bmatrix}
+1 & 0 & 0 & 0 \\
+0 & 1 & 0 & 0 \\
+a & b & c & d \\
+0 & 0 & \frac{1}{z_{near}} & 0
+\end{bmatrix}
+\begin{bmatrix}
+x \\
+y\\
+z \\
+1
+\end{bmatrix}
+\end{equation}
+
+Because we introduce the $\frac{z}{z_{near}}$, the transformation for z coordinate should be considered more carefully. As the z coordinate for points on the near and far plane should not be changed. 
+We substitute $z_{near}$ and $z_{far}$ into the matrix to get:
+\begin{equation}
+ax + by + cz_{near} + d = z_{near} \\
+ax + by + cz_{far} + d = z_{far}
+\end{equation}
+
+solve it and get:
+\begin{equation}
+\begin{bmatrix}
+1 & 0 & 0 & 0 \\
+0 & 1 & 0 & 0 \\
+0 & 0 & \dfrac{z_{near} + z_{far}}{z_{near}} & -z_{far} \\
+0 & 0 & \dfrac{1}{z_{near}} & 0
+\end{bmatrix}
+\end{equation}
+
+Notice that in this lab, the znear and zfar are given by positive numbers but the model is located with negative z. 
+We need to verify them to be towards the same direction.
+
+
+
+Rotation around Abritory Vector
+==========================
+
+The main idea is to simplify this problem into a much easier one, such as rotation around an axis. We know that two
+non-parallel vector determine a plane. We can then switch the problem to a standard coordinate system.
+
+Assume a vector $\mathbf{v}$ are required to rotate around another vector $\mathbf{u}$. Let $\mathbf{t} = \mathbf{v} \otimes \mathbf{u}$ be the tangent vector. 
+$\mathbf{b} = \mathbf{u} \otimes \mathbf{t} = \mathbf{u} \otimes ( \mathbf{v} \otimes \mathbf{u})$.
+
+Then the rotation can be represented as the translation in two orthorgnal directions. $\mathbf{v'} = \mathbf{v} + a\mathbf{t} + b\mathbf{bt}$. Easily, $a = \sin \theta, b = 1 - \cos \theta$.
+So the final formula is 
+$$
+\mathbf{v'} = \mathbf{v} + \sin \theta(\mathbf{v} \otimes \mathbf{u}) + (1-\cos \theta)\mathbf{u} \otimes ( \mathbf{v} \otimes \mathbf{u})
+$$
+
+
+
+
+<!--- Markdeep & image comparison library - probably no need to change anything below -->
+<style class="fallback">
+    body {
+        visibility: hidden;
+        white-space: pre;
+        font-family: monospace
+    }
+</style>
+<script src="../resources/markdeep.min.js"></script>
+<script>window.alreadyProcessedMarkdeep || (document.body.style.visibility = "visible")</script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+<!-- <script src="../resources/jquery.event.move.js"></script>
+<script src="../resources/jquery.twentytwenty.js"></script>
+<link href="../resources/offcanvas.css" rel="stylesheet">
+<link href="../resources/twentytwenty.css" rel="stylesheet" type="text/css" />
+<script>
+    $(window).load(function () { $(".twentytwenty-container").twentytwenty({ default_offset_pct: 0.5 }); });
+</script> -->
