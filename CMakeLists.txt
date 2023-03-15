@@ -27,3 +27,8 @@ add_subdirectory(lab6)
 target_compile_options(RayTracing PUBLIC -Wall  -pedantic -fsanitize=undefined)
 target_compile_features(RayTracing PUBLIC cxx_std_17)
 target_link_libraries(RayTracing PUBLIC -fsanitize=undefined)
+
+add_subdirectory(lab7)
+target_compile_options(PathTracing PUBLIC -Wall  -pedantic -fsanitize=undefined)
+target_compile_features(PathTracing PUBLIC cxx_std_17)
+target_link_libraries(PathTracing PUBLIC -fsanitize=undefined)
